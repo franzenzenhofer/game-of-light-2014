@@ -6,9 +6,9 @@
   {
     "title":"Game of Light",
     "toolbar":false,
-    "frame":false,
+    "frame":true,
     "position":"mouse",
-    "resizable":false,
+    "resizable":true,
     "fullscreen":true
   }
 }

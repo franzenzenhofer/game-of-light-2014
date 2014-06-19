@@ -1,4 +1,4 @@
-_DEBUG_ = true
+_DEBUG_ = false
 
 #magic numbers
 ENEMIES_PROPABILITY = 0.05
@@ -28,6 +28,11 @@ BULLET_SHOOTER_RATIO = 0.2
 SHOOTER_SHOOT_LOSS = 0.01
 
 DRAW_BIGGER_RADIUS_FACTOR = 1.8
+
+_NODE_WEBKIT_CONTEXT_ = false
+
+if require? 
+  _NODE_WEBKIT_CONTEXT_ = true
 
 
 dlog = (msg) ->
@@ -311,13 +316,30 @@ drawCircle = (ctx, circle, fill = randomColor(), border = [0,0,255], opacity = 1
 drawCircleExplosion = (circle, options, board_cxt) ->
 
 
-init = (w) ->
+init = (w = document.getElementById('world'), full_screen = true) ->
   dlog('in init')
-  world_width = w.width = window.innerWidth
-  world_height = w.height = window.innerHeight
+  dom_window = window
+  loop_id = undefined
 
-  if require?
-    alert('node-webkit context')
+  if _NODE_WEBKIT_CONTEXT_ is true
+    ngui = require('nw.gui')
+    nwin = ngui.Window.get()
+    nwin.show()
+    dom_window = nwin.window
+    if full_screen 
+      nwin.maximize()
+      w.width = nwin.width-nwin.x
+      w.height = nwin.height-nwin.y
+    else
+      w.width = dom_window.innerWidth
+      w.height = dom_window.innerHeight
+  else
+    w.width = dom_window.innerWidth
+    w.height = dom_window.innerHeight
+  
+  world_width = w.width  
+  world_height = w.height
+
 
   document.addEventListener('keydown', (event) ->
     event.preventDefault()
@@ -332,6 +354,11 @@ init = (w) ->
     )
 
   currently_active_commands = []
+
+  window.onresize = () ->
+    #alert('resize')
+    window.cancelAnimationFrame(loop_id)
+    init(w, false)
   
 
 
@@ -469,7 +496,7 @@ init = (w) ->
       for e in explosions
         do (e) ->
           e.circle[2] = e.circle[2] + 50  
-          e.opacity = e.opacity - 0.1
+          e.opacity = Math.round((e.opacity - 0.1)*100)/100
           if e.opacity <= 0
             e.alive = false  
 
@@ -560,4 +587,4 @@ init = (w) ->
 
   game(w, NUMBER_OF_ENEMIES, ENEMIES_PROPABILITY)
 
-init(document.getElementById('world'))
+init()
