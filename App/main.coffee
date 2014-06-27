@@ -34,6 +34,10 @@ _NODE_WEBKIT_CONTEXT_ = false
 if require? 
   _NODE_WEBKIT_CONTEXT_ = true
 
+#on start full screen (for node-webkit)
+FULL_SCREEN = false
+
+
 
 dlog = (msg) ->
   console.log(msg) if _DEBUG_
@@ -315,18 +319,14 @@ drawCircle = (ctx, circle, fill = randomColor(), border = [0,0,255], opacity = 1
 
 drawCircleExplosion = (circle, options, board_cxt) ->
 
-
-init = (w = document.getElementById('world'), full_screen = true) ->
-  dlog('in init')
+setWorldWidthAndHeight = (w, full_screen = FULL_SCREEN) ->
   dom_window = window
-  loop_id = undefined
-
   if _NODE_WEBKIT_CONTEXT_ is true
     ngui = require('nw.gui')
     nwin = ngui.Window.get()
-    nwin.show()
     dom_window = nwin.window
     if full_screen 
+      nwin.show()
       nwin.maximize()
       w.width = nwin.width-nwin.x
       w.height = nwin.height-nwin.y
@@ -336,10 +336,13 @@ init = (w = document.getElementById('world'), full_screen = true) ->
   else
     w.width = dom_window.innerWidth
     w.height = dom_window.innerHeight
-  
-  world_width = w.width  
-  world_height = w.height
+  return w
 
+
+init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
+  dlog('in init')
+  
+  loop_id = undefined
 
   document.addEventListener('keydown', (event) ->
     event.preventDefault()
@@ -355,10 +358,7 @@ init = (w = document.getElementById('world'), full_screen = true) ->
 
   currently_active_commands = []
 
-  window.onresize = () ->
-    #alert('resize')
-    window.cancelAnimationFrame(loop_id)
-    init(w, false)
+
   
 
 
@@ -378,10 +378,19 @@ init = (w = document.getElementById('world'), full_screen = true) ->
           temp.push(co)
     currently_active_commands = temp
     dlog(currently_active_commands)
+
+
   
+  window.onresize = () ->
+    window.cancelAnimationFrame(loop_id)
+    game(w, true)
 
 
-  game = (w, max_nr_of_enemies, chance_of_new_enemy, min_enemy_speed, max_enemy_speed, number_of_active_players = 1) ->
+  game = (w, full_screen = FULL_SCREEN, max_nr_of_enemies = NUMBER_OF_ENEMIES, chance_of_new_enemy = ENEMIES_PROPABILITY, min_enemy_speed, max_enemy_speed, number_of_active_players = 1) ->
+    w = setWorldWidthAndHeight(w)
+    world_width = w.width  
+    world_height = w.height
+
     wctx = w.getContext('2d')
     cache_canvas = document.createElement('canvas')
     cache_canvas.width = world_width
@@ -389,10 +398,12 @@ init = (w = document.getElementById('world'), full_screen = true) ->
     cctx = cache_canvas.getContext('2d')
     dlog('in game')
     #cctx = wctx
-    enemies = []
     players = []
+    enemies = []
     explosions = []
     bullets = []
+
+
     _JUST_FIRED_A_BULLET_ = false
 
     explodeBubble = (b) ->
@@ -558,8 +569,7 @@ init = (w = document.getElementById('world'), full_screen = true) ->
       #cctx.globalCompositeOperation = "source-over"
       cctx.fillStyle = "rgba(0, 0, 0, 0.3)"
       cctx.fillRect(0, 0, world_width, world_height)
-      #debugger;
-      #cctx.beginPath()
+
 
       for b in bubbles 
         drawCircle(cctx, b.circle, b.fillColor, b.strokeColor, b.opacity)
@@ -572,19 +582,16 @@ init = (w = document.getElementById('world'), full_screen = true) ->
       window.stats.begin()
       loop_id = window.requestAnimationFrame(run)
       [continue_game, bubbles] = update()
-      
-      #look if our player is still alive
       if continue_game is false
         window.cancelAnimationFrame(loop_id)
         loop_id = undefined
-        #alert('ende')
-        #start again
-        game(w, NUMBER_OF_ENEMIES, ENEMIES_PROPABILITY)
-
+        game(w)
       draw(bubbles)
       window.stats.end()
     run()
 
-  game(w, NUMBER_OF_ENEMIES, ENEMIES_PROPABILITY)
+  game(w)
 
 init()
+
+
