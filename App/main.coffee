@@ -415,7 +415,6 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
     dlog(currently_active_commands)
 
   #touch suport
-
   #joystick = nipplejs.create({
   #  zone: w
   #  color: 'black'
