@@ -8,13 +8,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * { margin:0; padding:0; } 
-        html, body { width:100%; height:100%; background-color: black; } 
+        html, body { width:100%; height:100%; background-color: white; } 
         canvas { display:block; -webkit-transform:translateZ(0); transform:translateZ(0); -moz-transform:translateZ(0);} 
     </style>
   </head>
   <body>
     <canvas id="world" width="100%" height="100%"></canvas>
     <script src="bower_components/stats.js/build/stats.min.js"></script>
+    <script src="bower_components/pleasejs/dist/Please.js"></script>
+    <script src="node_modules/nipplejs/dist/nipplejs.js"></script>
     <script>window.stats = new Stats();
 stats.setMode(0); // 0: fps, 1: ms
 

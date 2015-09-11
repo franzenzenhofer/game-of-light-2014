@@ -1,14 +1,13 @@
 {
-  "name":"Game of Light",
-  "main":"index.html",
-  "version":"1.0.0",
-  "window":
-  {
-    "title":"Game of Light",
-    "toolbar":false,
-    "frame":true,
-    "position":"mouse",
-    "resizable":true,
-    "fullscreen":true
+  "name": "game-of-light",
+  "main": "index.html",
+  "version": "1.0.0",
+  "window": {
+    "title": "game-of-light",
+    "toolbar": false,
+    "frame": true,
+    "position": "mouse",
+    "resizable": true,
+    "fullscreen": true
   }
 }

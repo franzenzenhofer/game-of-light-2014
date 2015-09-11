@@ -1,4 +1,6 @@
-_DEBUG_ = false
+#please = require('bower_components/nipplejs')
+#console.log(please)
+_DEBUG_ = true
 
 #magic numbers
 ENEMIES_PROPABILITY = 0.05
@@ -22,13 +24,12 @@ MAX_RADIUS = 500
 
 MAX_ENEMY_RADIUS = 450
 MIN_ENEMY_RADIUS = 1
-PROPORTION_MAX_NEW_ENEMY_SIZE = 12.0
+PROPORTION_MAX_NEW_ENEMY_SIZE = 8.0
 
 BULLET_SHOOTER_RATIO = 0.2
 SHOOTER_SHOOT_LOSS = 0.01
 
-DRAW_BIGGER_RADIUS_FACTOR = 1.8
-
+DRAW_BIGGER_RADIUS_FACTOR = 1.9 #1.8
 _NODE_WEBKIT_CONTEXT_ = false
 
 if require? 
@@ -76,11 +77,27 @@ zeroTo255 = (n) ->
 randomColor = (r,g,b) ->
   return [zeroTo255(r),zeroTo255(g),zeroTo255(b)]
 
+randomPrettyColor = (r,g,b) ->
+  c = Please.make_color({
+    format:'rgb'
+    saturation: randomInt(80,100)/100
+    value: randomInt(50,100)/100
+    })
+  #dlog(c)
+
+  return [c[0].r,c[0].g,c[0].b]
+  #return [zeroTo255(r),zeroTo255(g),zeroTo255(b)]
+
 randomColorHsl = (h,s,l) ->
   return [randomIntDefault(0,360,h), randomIntDefault(0,100,l), randomIntDefault(0,100,l)]
 
 randomPrettyHslColor = (h) ->
-  randomeColor(h, 100, 50)
+  c = Please.make_color({
+    format:'hsl'
+    saturation: 1.0
+    })
+  #randomeColor(h, 100, 50)
+  return [c[0].h,c[0].s,c[0].l]
 
 makeColorString = (color_rgb_array, opacity = 1) ->
   [r,g,b] = color_rgb_array
@@ -113,8 +130,19 @@ maxEnemyVelocity = (player) ->
 
 #higher abstractions
 moveBubble = (bubble) ->
-  bubble.circle[0] = bubble.circle[0] + bubble.vx
-  bubble.circle[1] = bubble.circle[1] + bubble.vy
+  #the bigger, the slower
+  #if bubble.vx < 0
+  #  real_bubble_vx = bubble.vx * 1- bubble.circle[2]/MAX_ENEMY_RADIUS
+  #else
+  #  real_bubble_vx = bubble.vx - bubble.circle[2]/MAX_ENEMY_RADIUS
+
+  #if bubble.vy < 0
+  #  real_bubble_vy = bubble.vy + bubble.circle[2]/MAX_ENEMY_RADIUS
+  #else
+  #  real_bubble_vy = bubble.vy - bubble.circle[2]/MAX_ENEMY_RADIUS
+
+  bubble.circle[0] = bubble.circle[0] + bubble.vx * (1 - bubble.circle[2]/MAX_RADIUS)
+  bubble.circle[1] = bubble.circle[1] + bubble.vy * (1 - bubble.circle[2]/MAX_RADIUS)
   return bubble
 
 limitPlayerVelocity = (v) ->
@@ -127,17 +155,18 @@ limitPlayerVelocity = (v) ->
 
 moveBubbleWithinBounds = (w,h,bubble) ->
   [x,y,r] = bubble.circle
-  if y < (r * -1)
-    bubble.circle[1] = h+r
+  r_exp = r * DRAW_BIGGER_RADIUS_FACTOR
+  if y < (r_exp * -1)
+    bubble.circle[1] = h+r_exp
     return moveBubble(bubble)
-  else if y > (h + r)
-    bubble.circle[1] = r * -1
+  else if y > (h + r_exp)
+    bubble.circle[1] = r_exp * -1
     return moveBubble(bubble)
-  else if x < (r * -1)
-    bubble.circle[0] = w + r
+  else if x < (r_exp * -1)
+    bubble.circle[0] = w + r_exp
     return moveBubble(bubble)
-  else if x > w+r
-    bubble.circle[0] = r * -1
+  else if x > w+r_exp
+    bubble.circle[0] = r_exp * -1
     return moveBubble(bubble)
   else
     return moveBubble(bubble)
@@ -145,7 +174,7 @@ moveBubbleWithinBounds = (w,h,bubble) ->
 makeBubble = (x = 100, y = 100, r = 100, vx = 0, vy = 0, rgb) ->
   b = {}
   b.circle = c(x,y,r)
-  b.fillColor = rgb ? randomColor()
+  b.fillColor = rgb ? randomPrettyColor() #randomColor()
   b.opacity = 1
   b.strokeColor = [0,0,255]
   b.alive = true
@@ -162,13 +191,15 @@ makePlayer = (x,y,r) ->
   makeBubble(x,y,r,0,0,[255,255,0])
 
 spawnPlayer = (w,h) ->
-  makePlayer(Math.floor(w/2), Math.floor(h/2), PLAYER_START_SIZE)
+  #PLAYER_START_SIZE ignored
+  makePlayer(Math.floor(w/2), Math.floor(h/2), w*0.005)
 
 makeBullet = (x,y,r,vx,vy,rgb) ->
   makeBubble(x, y, r, vx, vy, rgb)
 
 spawnEnemy = (world_width, world_height, min_r = 15, max_r = 75, min_v = MIN_ENEMY_SPEED, max_v = MAX_ENEMY_SPEED) ->
   r = randomInt(min_r, max_r)
+  r_exp = r * DRAW_BIGGER_RADIUS_FACTOR 
   vx = randomNumber(min_v, max_v)
   vy = randomNumber(min_v, max_v)
   where = Math.random()
@@ -176,24 +207,24 @@ spawnEnemy = (world_width, world_height, min_r = 15, max_r = 75, min_v = MIN_ENE
     when (where < 0.25)
       #top
       x = Math.random()*world_width
-      y = r * -1
+      y = r_exp * -1
       #vy = vy
       vx = vx * randomPlusOrMinusOne() 
     when (where < 0.5)
       #bottom
       x = Math.random()*world_width
-      y = world_height+r
+      y = world_height+r_exp 
       vy = vy * -1
       vx = vx * randomPlusOrMinusOne()
     when (where < 0.75)
       #left
-      x = r * -1
+      x = r_exp  * -1
       y = Math.random()*world_height
       vy = vy * randomPlusOrMinusOne()
       vx = vx 
     else 
       #right
-      x = world.width + r
+      x = world.width + r_exp 
       y = Math.random()*world_height
       vy = vy * randomPlusOrMinusOne()
       vx = vx * -1
@@ -246,6 +277,20 @@ colorMixHsl = (hsl1, hsl2, ratio) ->
 
     return [(h1+(parseInt(h2*ratio)))%360, (s1+s2)/2, (l1+l2)/2]
 
+
+colorMixRgbLikeHsv = (rgb1, rgb2, percentage) ->
+  [r1, g1, b1] = rgb1
+  [r2, g2, b2] = rgb2
+
+  hsv1 = Please.RGB_to_HSV({r:r1, g:g1, b:b1})
+  hsv2 = Please.RGB_to_HSV({r:r2, g:g2, b:b2})
+
+
+  hsv1.h = (hsv1.h + (hsv2.h * percentage)) % 360 
+  
+  rgb_new = Please.HSV_to_RGB(hsv1)
+  return [Math.floor(rgb_new.r), Math.floor(rgb_new.g), Math.floor(rgb_new.b)]
+
 colorMix = (rgb1, rgb2, percentage) ->
     [r1, g1, b1] = rgb1
     [r2, g2, b2] = rgb2
@@ -269,7 +314,10 @@ colorMix = (rgb1, rgb2, percentage) ->
     #R' = R1 + f * (R2 - R1)
     #G' = G1 + f * (G2 - G1)
     #B' = B1 + f * (B2 - B1)
+    #return [255, 255, 255]
     return [r_n, g_n, b_n]
+
+
 
 
 
@@ -291,6 +339,7 @@ event2Command = (event) ->
   return false
 
 
+
 #drawFunctions
 drawCircleBox = (circle, ctx) ->
 
@@ -298,14 +347,16 @@ drawCircleBox = (circle, ctx) ->
 drawCircle = (ctx, circle, fill = randomColor(), border = [0,0,255], opacity = 1) ->
   [x,y,r]=rc(circle)
   if r <= 0 then return false
-  ctx.globalCompositeOperation = "lighter"
+  ctx.globalCompositeOperation = "lighter"#"saturation"#"lighter"
   ctx.lineWidth = 2
   #ctx.fillStyle = makeColorString(fill)
   gradient = ctx.createRadialGradient(x, y, 0, x, y, r*DRAW_BIGGER_RADIUS_FACTOR)
   #gradient.addColorStop(0, "white")
   #gradient.addColorStop(0.4, "white")
-  gradient.addColorStop(0.4, makeColorString(fill, opacity))
-  gradient.addColorStop(1, "black")
+  gradient.addColorStop(0, makeColorString(fill, opacity))
+  gradient.addColorStop(1/DRAW_BIGGER_RADIUS_FACTOR, makeColorString(fill, opacity))
+  gradient.addColorStop(1,'black')
+  #gradient.addColorStop(1, "rgba(0,0,0,0.3)")
   ctx.fillStyle = gradient
   #ctx.strokeStyle = makeColorString(border)
   #ctx.strokeStyle = makeColorString(border)
@@ -344,23 +395,7 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
   
   loop_id = undefined
 
-  document.addEventListener('keydown', (event) ->
-    event.preventDefault()
-    command = event2Command(event)
-    if command then setActiveCommand(command)
-    )
-
-  document.addEventListener('keyup', (event) ->
-    event.preventDefault()
-    command = event2Command(event)
-    if command then removeActiveCommand(command)
-    )
-
   currently_active_commands = []
-
-
-  
-
 
   getActiveCommands = () ->
     return currently_active_commands
@@ -378,6 +413,33 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
           temp.push(co)
     currently_active_commands = temp
     dlog(currently_active_commands)
+
+  #touch suport
+
+  #joystick = nipplejs.create({
+  #  zone: w
+  #  color: 'black'
+  #})
+
+  #joystick.on('dir:up', setActiveCommand('up'))
+  #joystick.on('dir:down', setActiveCommand('down'))
+  #joystick.on('dir:left', setActiveCommand('left'))
+  #joystick.on('dir:right', setActiveCommand('right'))
+  
+
+  document.addEventListener('keydown', (event) ->
+    event.preventDefault()
+    command = event2Command(event)
+    if command then setActiveCommand(command)
+    )
+
+  document.addEventListener('keyup', (event) ->
+    event.preventDefault()
+    command = event2Command(event)
+    if command then removeActiveCommand(command)
+    )
+
+
 
 
   
@@ -434,7 +496,9 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
         looser.circle[2] = looser.circle[2] - DEFAULT_NEGATIVE_CIRCLE_JOIN_RATE
         winner_area = getA(winner.circle)
         percentage_of_area = looser_area_difference / winner_area
-        winner.fillColor = colorMix(winner.fillColor, looser.fillColor, percentage_of_area)
+        #winner.fillColor = colorMix(winner.fillColor, looser.fillColor, percentage_of_area)
+        colorMixRgbLikeHsv
+        winner.fillColor = colorMixRgbLikeHsv(winner.fillColor, looser.fillColor, percentage_of_area)
         winner.circle[2] = getRadiusByArea(winner_area+(looser_area_difference*RATIO_PREVAILANCE_WITH_MERGE))
     
         if looser.circle[2] < MINIMAL_VIABLE_RADIUS
@@ -497,7 +561,7 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
           #dlog(p)
           #debugger;
           movePlayer(getActiveCommands(), world_width, world_height, p)
-          if p.circle[2] > MAX_RADIUS 
+          if p.circle[2] > MAX_RADIUS or p.circle[2] > world_height or p.circle[2] > world_width
             continue_game = false
 
       for bullet in bullets
