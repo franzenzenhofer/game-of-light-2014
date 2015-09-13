@@ -433,7 +433,6 @@
     if (event.keyCode === 32) {
       return 'fire';
     }
-    dlog(event.keyCode);
     return false;
   };
 
@@ -495,24 +494,29 @@
   };
 
   init = function(w, full_screen) {
-    var currently_active_commands, game, getActiveCommands, loop_id, removeActiveCommand, setActiveCommand;
+    var currently_active_commands, game, getActiveCommands, joystick, keydown, keyup, loop_id, removeActiveCommand, removeAllActiveCommand, setActiveCommand;
     if (w == null) {
       w = document.getElementById('world');
     }
     if (full_screen == null) {
       full_screen = FULL_SCREEN;
     }
-    dlog('in init');
     loop_id = void 0;
     currently_active_commands = [];
     getActiveCommands = function() {
       return currently_active_commands;
     };
     setActiveCommand = function(command) {
+      dlog('set active command');
+      dlog(command);
       if (currently_active_commands.indexOf(command) === -1) {
         currently_active_commands.push(command);
       }
+      dlog('set currently active commands');
       return dlog(currently_active_commands);
+    };
+    removeAllActiveCommand = function() {
+      return currently_active_commands = [];
     };
     removeActiveCommand = function(command) {
       var co, fn, j, len, temp;
@@ -527,23 +531,60 @@
         fn(co);
       }
       currently_active_commands = temp;
+      dlog('remove currently active commands');
       return dlog(currently_active_commands);
     };
-    document.addEventListener('keydown', function(event) {
+    joystick = nipplejs.create();
+    joystick.on('move', function(evt, data) {
+      var command, fake_event, ref;
+      dlog(data);
+      if (data.force < 1) {
+        removeAllActiveCommand();
+        return setActiveCommand('slowdown');
+      } else {
+        command = data != null ? (ref = data.direction) != null ? ref.angle : void 0 : void 0;
+        dlog('!!!!' + command);
+        fake_event = {};
+        removeAllActiveCommand();
+        if (command === 'up') {
+          fake_event.keyCode = 38;
+          return keydown(fake_event);
+        } else if (command === 'down') {
+          fake_event.keyCode = 40;
+          return keydown(fake_event);
+        } else if (command === 'left') {
+          fake_event.keyCode = 37;
+          return keydown(fake_event);
+        } else if (command === 'right') {
+          fake_event.keyCode = 39;
+          return keydown(fake_event);
+        }
+      }
+    });
+    joystick.on('end', function(evt, data) {
+      return removeAllActiveCommand();
+    });
+    keydown = function(event) {
       var command;
-      event.preventDefault();
       command = event2Command(event);
       if (command) {
         return setActiveCommand(command);
       }
-    });
-    document.addEventListener('keyup', function(event) {
+    };
+    keyup = function(event) {
       var command;
-      event.preventDefault();
       command = event2Command(event);
       if (command) {
         return removeActiveCommand(command);
       }
+    };
+    document.addEventListener('keydown', function(event) {
+      event.preventDefault();
+      return keydown(event);
+    });
+    document.addEventListener('keyup', function(event) {
+      event.preventDefault();
+      return keyup(event);
     });
     window.onresize = function() {
       window.cancelAnimationFrame(loop_id);
@@ -571,7 +612,6 @@
       cache_canvas.width = world_width;
       cache_canvas.height = world_height;
       cctx = cache_canvas.getContext('2d');
-      dlog('in game');
       players = [];
       enemies = [];
       explosions = [];
@@ -635,8 +675,14 @@
             return p.vx = limitPlayerVelocity(p.vx);
           } else if (command === 'fire') {
             return fireBulletBy(p);
+          } else if (command === 'slowdown') {
+            p.vx = limitPlayerVelocity(p.vx * 0.95);
+            return p.vy = limitPlayerVelocity(p.vy * 0.95);
+          } else if (command === 'stop') {
+            p.vy = 0;
+            return p.vx = 0;
           } else {
-            return dlog('unkown command: ' + c);
+
           }
         };
         for (j = 0, len = active_commands.length; j < len; j++) {
@@ -648,8 +694,7 @@
       fireBulletBy = function(p) {
         var bullet_area, bullet_r, p_area, r, ref, x, y;
         if (_JUST_FIRED_A_BULLET_ === true) {
-          dlog("can't fire");
-          return false;
+
         }
         _JUST_FIRED_A_BULLET_ = true;
         delay(500, (function() {

@@ -1,5 +1,4 @@
-#please = require('bower_components/nipplejs')
-#console.log(please)
+
 _DEBUG_ = true
 
 #magic numbers
@@ -83,7 +82,7 @@ randomPrettyColor = (r,g,b) ->
     saturation: randomInt(80,100)/100
     value: randomInt(50,100)/100
     })
-  #dlog(c)
+  ##dlog(c)
 
   return [c[0].r,c[0].g,c[0].b]
   #return [zeroTo255(r),zeroTo255(g),zeroTo255(b)]
@@ -335,7 +334,7 @@ event2Command = (event) ->
   if event.keyCode is 37 then return 'left'
   if event.keyCode is 39 then return 'right'
   if event.keyCode is 32 then return 'fire'
-  dlog(event.keyCode)
+  #dlog(event.keyCode)
   return false
 
 
@@ -391,7 +390,7 @@ setWorldWidthAndHeight = (w, full_screen = FULL_SCREEN) ->
 
 
 init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
-  dlog('in init')
+  #dlog('in init')
   
   loop_id = undefined
 
@@ -401,9 +400,15 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
     return currently_active_commands
 
   setActiveCommand = (command) ->
+    dlog('set active command')
+    dlog(command)
     if currently_active_commands.indexOf(command) is -1
       currently_active_commands.push(command)
+    dlog('set currently active commands')
     dlog(currently_active_commands)
+
+  removeAllActiveCommand = () ->
+    currently_active_commands = []
 
   removeActiveCommand = (command) ->
     temp = []
@@ -412,30 +417,67 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
         if co isnt command
           temp.push(co)
     currently_active_commands = temp
+    dlog('remove currently active commands')
     dlog(currently_active_commands)
 
   #touch suport
-  #joystick = nipplejs.create({
-  #  zone: w
-  #  color: 'black'
-  #})
+  joystick = nipplejs.create()
 
-  #joystick.on('dir:up', setActiveCommand('up'))
-  #joystick.on('dir:down', setActiveCommand('down'))
-  #joystick.on('dir:left', setActiveCommand('left'))
-  #joystick.on('dir:right', setActiveCommand('right'))
+  joystick.on('move', (evt, data) ->
+    ##dlog(evt)
+    dlog(data)
+    if data.force < 1
+      removeAllActiveCommand()
+      setActiveCommand('slowdown')
+    else
+      command = data?.direction?.angle
+      dlog('!!!!'+command)
+      fake_event = {}
+      removeAllActiveCommand()
+      #if event.keyCode is 38 then return 'up'
+      if command is 'up'
+        #dlog('touch up')
+        fake_event.keyCode = 38
+        keydown(fake_event)
+      #if event.keyCode is 40 then return 'down'
+      else if command is 'down'
+        #dlog('touch down')
+        fake_event.keyCode = 40
+        keydown(fake_event)
+      #if event.keyCode is 37 then return 'left'
+      else if command is 'left'
+        fake_event.keyCode = 37
+        keydown(fake_event)
+      #if event.keyCode is 39 then return 'right'
+      else if command is 'right'
+        fake_event.keyCode = 39
+        keydown(fake_event)
+      #if event.keyCode is 32 then return 'fire'
+  )
+
+  joystick.on('end', (evt, data) ->
+    #dlog("END")
+    removeAllActiveCommand()
+  )
+
+
   
+  keydown = (event) ->
+    command = event2Command(event)
+    if command then setActiveCommand(command)
+
+  keyup = (event) ->  
+    command = event2Command(event)
+    if command then removeActiveCommand(command)
 
   document.addEventListener('keydown', (event) ->
     event.preventDefault()
-    command = event2Command(event)
-    if command then setActiveCommand(command)
+    keydown(event)
     )
 
   document.addEventListener('keyup', (event) ->
     event.preventDefault()
-    command = event2Command(event)
-    if command then removeActiveCommand(command)
+    keyup(event)
     )
 
 
@@ -457,7 +499,7 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
     cache_canvas.width = world_width
     cache_canvas.height = world_height
     cctx = cache_canvas.getContext('2d')
-    dlog('in game')
+    #dlog('in game')
     #cctx = wctx
     players = []
     enemies = []
@@ -521,12 +563,19 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
             p.vx = limitPlayerVelocity(p.vx)
           else if command is 'fire'
             fireBulletBy(p)
+          else if command is 'slowdown'
+            p.vx = limitPlayerVelocity(p.vx * 0.95)
+            p.vy = limitPlayerVelocity(p.vy * 0.95)
+          else if command is 'stop'
+            p.vy = 0
+            p.vx = 0
           else
-            dlog('unkown command: '+c)
+            #dlog('unkown command: '+c)
       moveBubbleWithinBounds(w,h,p)
 
+
     fireBulletBy = (p) ->
-      if _JUST_FIRED_A_BULLET_ is true then dlog("can't fire");return false
+      if _JUST_FIRED_A_BULLET_ is true then #dlog("can't fire");return false
       _JUST_FIRED_A_BULLET_ = true
       delay(500, (()->_JUST_FIRED_A_BULLET_ = false))
       [x,y,r] = p.circle
@@ -557,7 +606,7 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
 
       for p in players
         do (p) ->
-          #dlog(p)
+          ##dlog(p)
           #debugger;
           movePlayer(getActiveCommands(), world_width, world_height, p)
           if p.circle[2] > MAX_RADIUS or p.circle[2] > world_height or p.circle[2] > world_width
@@ -574,7 +623,7 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
           if e.opacity <= 0
             e.alive = false  
 
-      #dlog(enemies)
+      ##dlog(enemies)
       #debugger;
 
       ##check if enemies colide with eachother
@@ -622,7 +671,7 @@ init = (w = document.getElementById('world'), full_screen = FULL_SCREEN) ->
       all_bubbles = players.concat(enemies, bullets, explosions) #players_and_enemies
       #return players
       #return enemies
-      #dlog(all_bubbles)
+      ##dlog(all_bubbles)
       #debugger
       return [continue_game, all_bubbles]
 
